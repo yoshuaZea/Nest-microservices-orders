@@ -9,9 +9,10 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { PrismaClient } from '@prisma/client';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { OrderPaginationDto } from './dto/order-pagination.dto';
-import { ChangeOrderStatusDto } from './dto';
+import { ChangeOrderStatusDto, PaidOrderDto } from './dto';
 import { NATS_SERVICE } from 'src/config';
 import { firstValueFrom } from 'rxjs';
+import { OrderWithProducts } from './interfaces/order-with-products.interface';
 
 @Injectable()
 export class OrdersService extends PrismaClient implements OnModuleInit {
@@ -131,6 +132,15 @@ export class OrdersService extends PrismaClient implements OnModuleInit {
             productId: true,
           },
         },
+        Payment: {
+          select: {
+            id: true,
+            orderId: true,
+            stripeChargeId: true,
+            receiptUrl: true,
+            createdAt: true,
+          },
+        },
       },
     });
 
@@ -171,5 +181,51 @@ export class OrdersService extends PrismaClient implements OnModuleInit {
       where: { id },
       data: { status },
     });
+  }
+
+  async createPaymentSession(order: OrderWithProducts) {
+    const paymentSession = await firstValueFrom(
+      this.productsClient.send('create.payment.session', {
+        orderId: order.id,
+        currency: 'usd',
+        items: order.OrderItem.map((item) => ({
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+        })),
+      }),
+    );
+
+    return paymentSession;
+  }
+
+  async paidOrder(paidOrderDto: PaidOrderDto) {
+    try {
+      this.logger.log('Order Paid');
+      this.logger.log(paidOrderDto);
+
+      const { orderId, receiptUrl, stripePaymendId } = paidOrderDto;
+
+      const order = await this.order.update({
+        where: { id: orderId },
+        data: {
+          status: 'PAID',
+          paid: true,
+          Payment: {
+            create: {
+              receiptUrl,
+              stripeChargeId: stripePaymendId,
+            },
+          },
+        },
+      });
+
+      return order;
+    } catch (error) {
+      throw new RpcException({
+        status: HttpStatus.BAD_REQUEST,
+        message: error.message,
+      });
+    }
   }
 }
