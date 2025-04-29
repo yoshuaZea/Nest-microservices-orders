@@ -1,0 +1,20 @@
+options:
+    defaultLogsBucketBehavior: REGIONAL_USER_OWNED_BUCKET
+steps:
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      [
+        "build",
+        "-t",
+        "northamerica-south1-docker.pkg.dev/microservices-store-450002/microservices-registry/orders-ms",
+        "-f",
+        "dockerfile.prod",
+        "--platform=linux/amd64",
+        ".",
+      ]
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      [
+        "push",
+        "northamerica-south1-docker.pkg.dev/microservices-store-450002/microservices-registry/orders-ms",
+      ]
