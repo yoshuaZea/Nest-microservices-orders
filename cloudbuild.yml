@@ -1,20 +1,22 @@
 options:
     defaultLogsBucketBehavior: REGIONAL_USER_OWNED_BUCKET
 steps:
-  - name: "gcr.io/cloud-builders/docker"
-    args:
-      [
-        "build",
-        "-t",
-        "northamerica-south1-docker.pkg.dev/microservices-store-450002/microservices-registry/orders-ms",
-        "-f",
-        "Dockerfile.prod",
-        "--platform=linux/amd64",
-        ".",
-      ]
-  - name: "gcr.io/cloud-builders/docker"
-    args:
-      [
-        "push",
-        "northamerica-south1-docker.pkg.dev/microservices-store-450002/microservices-registry/orders-ms",
-      ]
+- name: 'gcr.io/cloud-builders/docker'
+  entrypoint: 'bash'
+  args:
+    - -c
+    - |
+      docker build -t northamerica-south1-docker.pkg.dev/microservices-store-450002/microservices-registry/orders-ms -f Dockerfile.prod --platform=linux/amd64 --build-arg ORDERS_DATABASE_URL=$$DATABASE_URL .
+  secretEnv: ['DATABASE_URL']
+
+- name: 'gcr.io/cloud-builders/docker'
+  args:
+    [
+      'push',
+      'northamerica-south1-docker.pkg.dev/microservices-store-450002/microservices-registry/orders-ms',
+    ]
+
+availableSecrets:
+  secretManager:
+  - versionName: projects/448051848888/secrets/ORDERS_DATABASE_URL/versions/1
+    env: 'DATABASE_URL'
