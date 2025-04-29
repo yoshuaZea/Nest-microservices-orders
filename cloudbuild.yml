@@ -8,7 +8,7 @@ steps:
         "-t",
         "northamerica-south1-docker.pkg.dev/microservices-store-450002/microservices-registry/orders-ms",
         "-f",
-        "dockerfile.prod",
+        "Dockerfile.prod",
         "--platform=linux/amd64",
         ".",
       ]
